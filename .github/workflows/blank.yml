@@ -1,0 +1,399 @@
+name: Elite Subdomain Monitor
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: "Target Domain"
+        required: true
+        default: "example.com"
+
+  schedule:
+    - cron: "0 */12 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  recon:
+    runs-on: ubuntu-latest
+
+    env:
+      DOMAIN: ${{ github.event.inputs.domain }}
+
+    steps:
+
+############################################################
+# Checkout
+############################################################
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+############################################################
+# Setup Go
+############################################################
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+############################################################
+# Setup Python
+############################################################
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+############################################################
+# Install jq
+############################################################
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+############################################################
+# Install Recon Tools
+############################################################
+
+      - name: Install tools
+        run: |
+
+          go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+          go install github.com/tomnomnom/assetfinder@latest
+          go install github.com/projectdiscovery/chaos-client/cmd/chaos@latest
+          go install github.com/rix4uni/subdog@latest
+          go install github.com/rix4uni/certinfo@latest
+          go install github.com/gwen001/github-subdomains@latest
+
+          go install github.com/projectdiscovery/alterx/cmd/alterx@latest
+          go install github.com/Josue87/gotator@latest
+
+          go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest
+          go install github.com/projectdiscovery/shuffledns/cmd/shuffledns@latest
+          go install github.com/d3mondev/puredns/v2@latest
+
+          go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+
+          go install github.com/rix4uni/subdomainfuzz@latest
+          go install github.com/ffuf/ffuf/v2@latest
+
+          go install github.com/owasp-amass/amass/v4/...@master
+
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+############################################################
+# Install dnsgen
+############################################################
+
+      - name: Install dnsgen
+        run: |
+          pip install dnsgen
+
+############################################################
+# Install MassDNS
+############################################################
+
+      - name: Install MassDNS
+        run: |
+
+          git clone https://github.com/blechschmidt/massdns.git
+          cd massdns
+          make
+          sudo cp bin/massdns /usr/local/bin/
+
+############################################################
+# Install Subscraper
+############################################################
+
+      - name: Install Subscraper
+        run: |
+
+          git clone https://github.com/m8sec/subscraper
+          cd subscraper
+
+          python3 -m venv venv
+          source venv/bin/activate
+
+          pip install -r requirements.txt
+          pip install .
+
+          echo "$PWD/venv/bin" >> $GITHUB_PATH
+
+############################################################
+# Initialize Subfinder
+############################################################
+
+      - name: Initialize Subfinder
+        run: |
+          subfinder -h > /dev/null 2>&1 || true
+          mkdir -p ~/.config/subfinder
+
+############################################################
+# Configure Subfinder APIs
+############################################################
+      - name: Configure Subfinder APIs
+        run: |
+          mkdir -p ~/.config/subfinder
+
+          cat <<EOF > ~/.config/subfinder/provider-config.yaml
+          bevigil:
+            - ${BEVIGIL_API}
+          binaryedge:
+            - ${BINARYEDGE_API}
+          bufferover:
+            - ${BUFFEROVER_API}
+          builtwith:
+            - ${BUILTWITH_API}
+          censys:
+            - ${CENSYS_API_ID}:${CENSYS_API_SECRET}
+          certspotter:
+            - ${CERTSPOTTER_API}
+          chaos:
+            - ${CHAOS_API}
+          fullhunt:
+            - ${FULLHUNT_API}
+          github:
+            - ${GITHUB_PAT}
+          hunter:
+            - ${HUNTER_API}
+          intelx:
+            - ${INTELX_API}
+          securitytrails:
+            - ${SECURITYTRAILS_API}
+          shodan:
+            - ${SHODAN_API}
+          virustotal:
+            - ${VT_API}
+          EOF
+############################################################
+# Configure Subscraper
+############################################################
+      - name: Configure Subscraper
+        run: |
+          mkdir -p ~/.config/subscraper
+
+          cat <<EOF > ~/.config/subscraper/config.json
+          {
+            "bevigil":{"api_key":"${{ secrets.BEVIGIL_API }}"},
+            "bufferover":{"api_key":"${{ secrets.BUFFEROVER_API }}"},
+            "censys":{"api_id":"${{ secrets.CENSYS_API_ID }}","api_secret":"${{ secrets.CENSYS_API_SECRET }}"},
+            "chaos":{"access_token":"${{ secrets.CHAOS_API }}"},
+            "shodan":{"api_key":"${{ secrets.SHODAN_API }}"},
+            "virustotal":{"api_key":"${{ secrets.VT_API }}"}
+          }
+          EOF
+############################################################
+# Download Base Wordlists
+############################################################
+
+      - name: Download base wordlists
+        run: |
+
+          wget -O permutations.txt \
+          https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-5000.txt
+
+          wget -O resolvers.txt \
+          https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt
+
+############################################################
+# Download Additional Permutation Lists
+############################################################
+
+      - name: Download large permutation lists
+        run: |
+
+          wget -O sub1000.lst \
+          https://raw.githubusercontent.com/ehsahil/wordlists-for-nmap/master/sub1000.lst
+
+          wget -O sub10000.lst \
+          https://raw.githubusercontent.com/ehsahil/wordlists-for-nmap/master/sub10000.lst
+
+          wget -O sub100000.lst \
+          https://raw.githubusercontent.com/ehsahil/wordlists-for-nmap/master/sub100000.lst
+
+          wget -O sub1000000.lst \
+          https://raw.githubusercontent.com/ehsahil/wordlists-for-nmap/master/sub1000000.lst
+
+          wget -O seclists-110k.txt \
+          https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-110000.txt
+
+          wget --no-check-certificate \
+          -O drive_list1.txt \
+          "https://drive.google.com/uc?export=download&id=1mw7dclyjOr3Z7AXcqbP9o4Nw-iBAQBI0"
+
+          wget --no-check-certificate \
+          -O drive_list2.txt \
+          "https://drive.google.com/uc?export=download&id=1cV-hToCWWXusIc-xzjU9fiigOg0AbfRt"
+
+############################################################
+# Merge Permutation Lists
+############################################################
+
+      - name: Merge and deduplicate permutation lists
+        run: |
+
+          cat permutations.txt \
+          sub1000.lst \
+          sub10000.lst \
+          sub100000.lst \
+          sub1000000.lst \
+          seclists-110k.txt \
+          drive_list1.txt \
+          drive_list2.txt \
+          | sed 's/\r//g' \
+          | sort -u > mega-permutations.txt
+
+############################################################
+# Passive Enumeration
+############################################################
+
+      - name: Passive discovery
+        run: |
+
+          subfinder -d $DOMAIN -silent > subfinder.txt &
+          assetfinder --subs-only $DOMAIN > assetfinder.txt &
+          chaos -d $DOMAIN -silent > chaos.txt &
+          echo $DOMAIN | subdog > subdog.txt &
+          echo $DOMAIN | certinfo > certinfo.txt &
+          subscraper -d $DOMAIN -silent > subscraper.txt &
+
+          github-subdomains -d $DOMAIN -e \
+          -k ${{ secrets.GITHUB_PAT }} \
+          -o github.txt &
+
+          wait
+
+############################################################
+# Certificate Transparency Discovery
+############################################################
+
+      - name: Certificate Transparency discovery
+        run: |
+
+          curl -s "https://crt.sh/?q=%25.$DOMAIN&output=json" \
+          | jq -r '.[].name_value' \
+          | sed 's/\*\.//g' \
+          | sort -u > crtsh.txt || true
+
+############################################################
+# Merge Passive Results
+############################################################
+
+      - name: Merge passive
+        run: |
+
+          cat subfinder.txt assetfinder.txt chaos.txt subdog.txt certinfo.txt subscraper.txt github.txt crtsh.txt \
+          | sort -u > passive.txt
+
+############################################################
+# Recursive Enumeration
+############################################################
+
+      - name: Recursive discovery
+        run: |
+
+          cat passive.txt \
+          | xargs -P 20 -I % sh -c \
+          "subfinder -d % -recursive -silent" \
+          > recursive.txt
+
+############################################################
+# Merge Domains
+############################################################
+
+      - name: Merge domains
+        run: |
+          cat passive.txt recursive.txt | sort -u > domains.txt
+
+############################################################
+# Permutation Generation
+############################################################
+
+      - name: AlterX permutations
+        run: |
+          cat domains.txt | alterx -enrich > alterx.txt
+
+      - name: Gotator permutations
+        run: |
+
+          gotator -sub domains.txt -perm mega-permutations.txt -depth 1 -numbers 10 -mindup -adv -md > depth1.txt
+          gotator -sub domains.txt -perm mega-permutations.txt -depth 2 -numbers 10 -mindup -adv -md > depth2.txt
+
+      - name: DNSGen permutations
+        run: |
+          dnsgen domains.txt > dnsgen.txt
+
+############################################################
+# Merge Permutations
+############################################################
+
+      - name: Merge permutation sources
+        run: |
+
+          cat alterx.txt depth1.txt depth2.txt dnsgen.txt \
+          | sort -u > permutations-final.txt
+
+############################################################
+# Massive DNS Resolution
+############################################################
+
+      - name: ShuffleDNS bruteforce
+        run: |
+
+          shuffledns \
+          -d $DOMAIN \
+          -list permutations-final.txt \
+          -r resolvers.txt \
+          -mode bruteforce \
+          -massdns /usr/local/bin/massdns \
+          -silent \
+          -o shuffledns.txt
+
+############################################################
+# PureDNS Filtering
+############################################################
+
+      - name: PureDNS filtering
+        run: |
+
+          puredns resolve shuffledns.txt \
+          --resolvers resolvers.txt \
+          --write puredns-output.txt
+
+############################################################
+# DNS Validation
+############################################################
+
+      - name: DNS validation
+        run: |
+          dnsx -l puredns-output.txt -silent > resolved.txt
+
+############################################################
+# HTTP Probing
+############################################################
+
+      - name: HTTP probing
+        run: |
+          httpx -l resolved.txt -title -status-code -tech-detect -silent > live.txt
+
+############################################################
+# Discord Notification
+############################################################
+
+      - name: Discord notification
+        run: |
+
+          TOTAL=$(wc -l < live.txt)
+
+          MESSAGE="Recon finished for **$DOMAIN** - Live Subdomains: **$TOTAL**"
+
+          curl -H "Content-Type: application/json" \
+          -X POST \
+          -d "{\"content\":\"$MESSAGE\"}" \
+          ${{ secrets.DISCORD_WEBHOOK }}
