@@ -297,11 +297,9 @@ jobs:
       - name: Recursive discovery
         run: |
 
-          cat passive.txt \
-          | xargs -P 20 -I % sh -c \
-          "subfinder -d % -recursive -silent" \
-          > recursive.txt
-
+          while read domain; do
+            subfinder -d "$domain" -recursive -silent
+          done < passive.txt > recursive.txt
 ############################################################
 # Merge Domains
 ############################################################
