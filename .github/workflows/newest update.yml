@@ -267,8 +267,7 @@ jobs:
           subscraper -d $DOMAIN -silent > subscraper.txt &
 
           github-subdomains -d $DOMAIN -e \
-          -k -t ${{ secrets.GITHUB_PAT }} \
-          -o github.txt &
+          -k -o github.txt &
           wait
 
 ############################################################
