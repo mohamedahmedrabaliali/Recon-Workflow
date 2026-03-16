@@ -273,12 +273,22 @@ jobs:
 ############################################################
 # Certificate Transparency Discovery    #DONE
 ############################################################
-
       - name: Certificate Transparency discovery
         run: |
-          curl -s "https://crt.sh/?q=%25.${DOMAIN}&output=json" \
-          | jq -r '.[].name_value' | sed 's/\*\.//g' | sort -u > crtsh.txt 
-
+        
+         echo "Waiting before crt.sh query to avoid rate limiting..."
+         sleep 10
+    
+         curl -s \
+         -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+         --max-time 30 \
+         "https://crt.sh/?q=%25.${DOMAIN}&output=json" \
+         | jq -r '.[].name_value' 2>/dev/null \
+         | sed 's/\*\.//g' \
+         | sort -u > crtsh.txt || true
+    
+         echo "Certificates found: $(wc -l < crtsh.txt)"
+    
 ############################################################
 # Merge Passive Results
 ############################################################
