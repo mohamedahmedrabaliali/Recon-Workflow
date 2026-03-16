@@ -20,8 +20,8 @@ jobs:
 
     env:
       DOMAIN: ${{ github.event.inputs.domain }}
-      PDCP_API_KEY: ${{ secrets.PDCP_API_KEY }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PDCP_API_KEY: c84ed614-623f-4d2b-bc14-11566fd4ad27
+      GITHUB_TOKEN: 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
     steps:
 
 ############################################################
