@@ -262,7 +262,7 @@ jobs:
           subfinder -d $DOMAIN -silent > subfinder.txt &
           assetfinder --subs-only $DOMAIN > assetfinder.txt &
           chaos -d $DOMAIN -silent > chaos.txt &
-          echo $DOMAIN | subdog > subdog.txt &
+          echo $DOMAIN | subdog --silent > subdog.txt &
           echo $DOMAIN | certinfo > certinfo.txt &
           subscraper -d $DOMAIN -silent > subscraper.txt &
 
