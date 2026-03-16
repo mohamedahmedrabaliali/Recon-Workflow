@@ -273,22 +273,46 @@ jobs:
 ############################################################
 # Certificate Transparency Discovery    #DONE
 ############################################################
+
       - name: Certificate Transparency discovery
         run: |
-        
-         echo "Waiting before crt.sh query to avoid rate limiting..."
-         sleep 10
-    
-         curl -s \
-         -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
-         --max-time 30 \
-         "https://crt.sh/?q=%25.${DOMAIN}&output=json" \
-         | jq -r '.[].name_value' 2>/dev/null \
-         | sed 's/\*\.//g' \
-         | sort -u > crtsh.txt || true
-    
-         echo "Certificates found: $(wc -l < crtsh.txt)"
-    
+
+          echo "Searching Certificate Transparency logs for: ${DOMAIN}"
+          
+          # Add retry logic with user-agent to avoid rate limiting
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Attempt $((RETRY_COUNT+1))/$MAX_RETRIES"
+            
+            curl -s \
+              -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+              --max-time 30 \
+              "https://crt.sh/?q=%25.${DOMAIN}&output=json" \
+              | jq -r '.[].name_value' 2>/dev/null \
+              | sed 's/\*\.//g' \
+              | sort -u > crtsh.txt
+            
+            # Check if we got results
+            RESULT_COUNT=$(wc -l < crtsh.txt)
+            
+            if [ "$RESULT_COUNT" -gt 0 ]; then
+              echo "✓ Success! Found $RESULT_COUNT certificates"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT+1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "No results, retrying in 5 seconds..."
+                sleep 5
+              fi
+            fi
+          done
+          
+          FINAL_COUNT=$(wc -l < crtsh.txt)
+          echo "Final result: $FINAL_COUNT certificates found"
+          [ "$FINAL_COUNT" -gt 0 ] && head -5 crtsh.txt || echo "No certificates found"
+          
 ############################################################
 # Merge Passive Results
 ############################################################
