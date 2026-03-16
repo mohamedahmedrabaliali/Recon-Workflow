@@ -84,6 +84,8 @@ jobs:
           go install github.com/rix4uni/subdomainfuzz@latest
           go install github.com/ffuf/ffuf/v2@latest
 
+          go install github.com/rix4uni/haktrailsfree@latest
+          
           go install github.com/trickest/dsieve@latest
 
           go install github.com/owasp-amass/amass/v4/...@master
@@ -191,6 +193,31 @@ jobs:
             "virustotal":{"api_key":"${{ secrets.VT_API }}"}
           }
           EOF
+
+############################################################
+# Configure haktrailsfree
+############################################################
+      - name: Configure Haktrailsfree
+        run: |
+         cat << 'EOF' > cookie.txt
+         curl 'https://securitytrails.com/list/apex_domain/krazeplanet.com?page=1' \
+         -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
+         -H 'accept-language: en-US,en;q=0.9' \
+         -H 'cache-control: max-age=0' \
+         -b '_ga=GA1.2.327740942.1772717083; hubspotutk=ce62e56fd163c6ea6eefb18c48cb9a9d; cf_chl_rc_ni=1; securitytrails_asn_preload=1; cf_clearance=5riZa7JN1nYG7Nooq01PeGdQExo1QYRA95pUaR8vxB4-1773636477-1.2.1.1-MXQm1ntbwTgv4etRA7WnW5Y7aggDF9WnMTPaVfV9MHr_Q4zatF7372DMIR8oY6lhN7wePR9qeyawuyDc9HpUrq9VxVHWJ7TAFOzZWMw3nDRIi9dk6Iw5Kz86ul_UrwhryqOFi_kuANn7ON_mtMkmj_l0GiWuvZeAINsU9JWgBoWq0qxIou_KZ51n86n3CZZJwJRb7uvZUHpyCVK3yi1gXVLuGmO69yoAdz66BvYiUHbzdymFuJDNsCbjPeDqmcYe; _gid=GA1.2.124042780.1773636485; _gat_gtag_UA_108439842_1=1; __hstc=127779026.ce62e56fd163c6ea6eefb18c48cb9a9d.1772978525362.1772978525362.1773636495842.2; __hssrc=1; __hssc=127779026.1.1773636495842; SecurityTrails=Fe26.2*1*0dbb5597420b6fb90dd45976ecfddf61bc85d6d3c36b63b2bab341ba3dc14c8d*zjoV2V9vnzT2WCXzm76weA*fpX2JlKB1EVGxCgCoe19BtqLtjwfQJzZHAEBd6fkH-ltWjmHdDDs_uN3F-pQsGzv_ZciQ-0BbKA8NM2zisqNEh6NoeDgIamgjojbidt5_UuY5LmblaHTwUCSbD8K1NR5jN8TUyr9fRMlm9TDF_drquho-hWxfroEERSUwMmUcsWgPvCgAQcC33hhzu1Y4YAsaTOZmsrLHvneCLGVG3wfwe4bHYLc3au1qF9vqw3L-Fg3musYMh1KpCzRmeBC819UieWQ_NCZED5oK3HrZhGmVCUYFPgGpPTO5SXOxuhhMm1k4ZsB6GcD1uF6X0MpC7BSC0gzvx415YKIRfWHmqGo2-Fo3z5h-b-cogcVMgWd-SaHPpyqOakIGbRjNB0F-D1hxTbOjwqn6jbhn6vLgBTms--yB9Y3FIOLziAHHSf50GtqyA2Pwa5xRDNQawuk0klLmoQ6ixKjWHyKm5unMM7RywvFNPcupUuo1DQtDAFlOcF0URxpVcMpVC6-AdKjaJDbX5SEgDQ8VVI6VB51-lrGc8gYjFPt96cnRjB8R8Ah-qo0ZiZadJOY9GhOwkPXcYjAvUp5J8qmooPkLAqF36yTFJZIo_L6kFIuNop7Im7POG-shfNbqjX5dHWx068f3XAPEHM8HwjI67Ad7Bxopk1h34TAZOzOdqk6e3fyghDAXP2yCcKMfPpiEOmCTcijWO0hYoW5mR4AxPlY1VBc5kW_Nu_IFssTunKtiuUWa3X7V_Zyr3tqpOyHKRVcNIWs51p7oNivGP8K9hvLxlfjUpimb9r_j6NQq1Z9OzYq0Okevii5hpxmEhWYb13rpR6bRrSugZ2V-Wq-LbfS3abfbmDaWdDJtw3mtMMS_dyWO9i6sZBbjPHFzhwfovSi6XOZ4fFDVviiK6Y7evdY26d6bTuzbp_I2OoX1sYim2k8ZMgKE80Pq4dS2rBs1yfSLWlSs7Bay-5XBe8_fMNr02fKP0aeSzI4yqi8t7a1Ki4dZuQiCOVhjeuoH3LPsLDTEIfEToMjSGuJcFzMkNjkRgOBXd4ZIw*1774846108222*f7df4885dfd85a87b2897cee4dce4ae1ed04655f89a11b56c93558671fad9f7f*KYalLCO1kE3A_OJuj-kgnH1AaoOyyxc7ZqZajATIUwU~2' \
+         -H 'priority: u=0, i' \
+         -H 'referer: https://securitytrails.com/list/apex_domain/krazeplanet.com?page=1' \
+         -H 'sec-ch-ua: "Chromium";v="146", "Not-A.Brand";v="24", "Google Chrome";v="146"' \
+         -H 'sec-fetch-dest: document' \
+         -H 'sec-fetch-mode: navigate' \
+         -H 'sec-fetch-site: same-origin' \
+         -H 'upgrade-insecure-requests: 1' \
+         -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36'
+         EOF
+
+         echo "we will print the content of cookie.txt......"
+         cat cookie.txt
+         
 ############################################################
 # Download Base Wordlists  #DONE
 ############################################################
@@ -265,9 +292,9 @@ jobs:
           echo $DOMAIN | subdog --silent > subdog.txt &
           echo $DOMAIN | certinfo -silent > certinfo.txt &
           subscraper -d $DOMAIN -silent > subscraper.txt &
-
-          github-subdomains -d $DOMAIN -e \
-          -k -o github.txt &
+          echo ${DOMAIN} | haktrailsfree -c cookie.txt  --silent > haktrailsfree-result.txt &
+          
+          github-subdomains -d $DOMAIN -e -k -o github.txt &
           wait
 
 ############################################################
@@ -319,7 +346,7 @@ jobs:
 
       - name: Merge passive
         run: |
-          cat subfinder.txt assetfinder.txt chaos.txt subdog.txt certinfo.txt subscraper.txt github.txt crtsh.txt \
+          cat subfinder.txt assetfinder.txt chaos.txt subdog.txt certinfo.txt subscraper.txt haktrailsfree-result.txt github.txt crtsh.txt \
           | grep -v '\*' | sort -u > passive.txt
           
 ############################################################
