@@ -217,7 +217,59 @@ jobs:
 
          echo "we will print the content of cookie.txt......"
          cat cookie.txt
-         
+
+############################################################
+# Prepare the python script Results
+############################################################
+
+      - name: Prepare the python script 
+        run: |
+         cat << 'EOF' > python-script.txt
+         import requests
+         import json
+
+         URL = "https://urlscan.io/api/v1/search/?q=domain%3A${DOMAIN}"  
+
+         def extract_details():
+             try:
+                 response = requests.get(URL)
+                 response.raise_for_status()
+                 data = response.json()
+        
+                 domains = set()
+                 urls = set()
+                 asns = set()
+        
+         for result in data.get("results", []):
+                     # Extract domain
+                     page_domain = result.get("page", {}).get("domain")
+                     if page_domain:
+                         domains.add(page_domain)
+            
+                     # Extract URL containing 'chewy.com'
+                     page_url = result.get("page", {}).get("url")
+                     if page_url and "chewy.com" in page_url:
+                         urls.add(page_url)
+            
+                     # Extract ASN
+                     asn = result.get("page", {}).get("asn")
+                     if asn:
+                         asns.add(asn)
+        
+                 print("Domains:")
+                 print("\n".join(domains))
+                 print("\nURLs containing 'chewy.com':")
+                 print("\n".join(urls))
+                 print("\nASNs:")
+                 print("\n".join(map(str, asns)))
+    
+             except requests.RequestException as e:
+                 print("Error fetching data:", e)
+
+         if __name__ == "__main__":
+             extract_details()
+         EOF
+          
 ############################################################
 # Download Base Wordlists  #DONE
 ############################################################
@@ -341,15 +393,6 @@ jobs:
           [ "$FINAL_COUNT" -gt 0 ] && head -5 crtsh.txt || echo "No certificates found"
           
 ############################################################
-# Merge Passive Results
-############################################################
-
-      - name: Merge passive
-        run: |
-          cat subfinder.txt assetfinder.txt chaos.txt subdog.txt certinfo.txt subscraper.txt haktrailsfree-result.txt github.txt crtsh.txt \
-          | grep -v '\*' | sort -u > passive.txt
-          
-############################################################
 # Display all results
 ############################################################
 
@@ -378,6 +421,16 @@ jobs:
 
           echo -e "\n=== Certificate Transparency Results ==="
           [ -f crtsh.txt ] && wc -l crtsh.txt && head -5 crtsh.txt || echo "File not found"
+
+  
+############################################################
+# Merge Passive Results
+############################################################
+
+      - name: Merge passive
+        run: |
+          cat subfinder.txt assetfinder.txt chaos.txt subdog.txt certinfo.txt subscraper.txt haktrailsfree-result.txt github.txt crtsh.txt \
+          | grep -v '\*' | sort -u > passive.txt
           
 ############################################################
 # Recursive Enumeration
