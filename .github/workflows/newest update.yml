@@ -476,7 +476,21 @@ github-subdomains -d $DOMAIN -e \
           --resolvers resolvers.txt \
           --write final-domains.txt
 
+############################################################
+# Discord Notification
+############################################################
 
+      - name: Discord notification
+        run: |
+
+          TOTAL=$(wc -l < final-domains.txt)
+
+          MESSAGE="Recon finished for **$DOMAIN** - Live Subdomains: **$TOTAL**"
+
+          curl -H "Content-Type: application/json" \
+          -X POST \
+          -d "{\"content\":\"$MESSAGE\"}" \
+          ${{ secrets.DISCORD_WEBHOOK }}
 
 
 
