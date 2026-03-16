@@ -99,6 +99,14 @@ jobs:
       - name: Install dnsgen
         run: |
           pip install dnsgen
+          
+############################################################
+# Install SubEnum
+############################################################
+
+      - name: Install SubEnum
+        run: |
+         git clone https://github.com/bing0o/SubEnum.git ; cd SubEnum ; chmod +x setup.sh ; ./setup.sh
 
 ############################################################
 # Install MassDNS
@@ -346,6 +354,8 @@ jobs:
       - name: Passive discovery
         run: |
           python3 python-script.py 
+          
+          cd SubEnum ; ./subenum.sh -d ${DOMAIN} -p -u wayback,crt,abuseipdb,Findomain,Subfinder,Amass,Assetfinder --silent -o subenum-result.txt &
           subfinder -d $DOMAIN -silent > subfinder.txt &
           assetfinder --subs-only $DOMAIN > assetfinder.txt &
           chaos -d $DOMAIN -silent > chaos.txt &
@@ -435,14 +445,17 @@ jobs:
           
           echo -e "\n=== The Python Script Results ==="
           [ -f pyhon-script-results.txt ] && wc -l pyhon-script-results.txt && head -5 pyhon-script-results.txt || echo "File not found"
-  
+
+          echo -e "\n=== Subenum Results ==="
+          [ -f subenum-result.txt ] && wc -l subenum-result.txt && head -5 subenum-result.txt || echo "File not found"
+          
 ############################################################
 # Merge Passive Results
 ############################################################
 
       - name: Merge passive
         run: |
-          cat subfinder.txt assetfinder.txt chaos.txt subdog.txt certinfo.txt subscraper.txt pyhon-script-results.txt haktrailsfree-result.txt github.txt crtsh.txt \
+          cat subenum-result.txt subfinder.txt assetfinder.txt chaos.txt subdog.txt certinfo.txt subscraper.txt pyhon-script-results.txt haktrailsfree-result.txt github.txt crtsh.txt \
           | grep -v '\*' | sort -u > passive.txt
           
 ############################################################
@@ -451,7 +464,7 @@ jobs:
 
       - name: Recursive discovery
         run: |
-
+        
           while read domain; do
             subfinder -d "$domain" -recursive -silent
           done < passive.txt > recursive.txt
