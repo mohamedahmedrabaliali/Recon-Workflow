@@ -293,6 +293,36 @@ jobs:
           | sort -u > passive.txt
 
 ############################################################
+# Debug step to check the results
+############################################################
+
+      - name: Display all results
+        run: |
+          echo "=== Subfinder Results ==="
+          [ -f subfinder.txt ] && wc -l subfinder.txt && head -5 subfinder.txt || echo "File not found"
+
+          echo -e "\n=== Assetfinder Results ==="
+          [ -f assetfinder.txt ] && wc -l assetfinder.txt && head -5 assetfinder.txt || echo "File not found"
+
+          echo -e "\n=== Chaos Results ==="
+          [ -f chaos.txt ] && wc -l chaos.txt && head -5 chaos.txt || echo "File not found"
+
+          echo -e "\n=== Subdog Results ==="
+          [ -f subdog.txt ] && wc -l subdog.txt && head -5 subdog.txt || echo "File not found"
+
+          echo -e "\n=== Certinfo Results ==="
+          [ -f certinfo.txt ] && wc -l certinfo.txt && head -5 certinfo.txt || echo "File not found"
+
+          echo -e "\n=== Subscraper Results ==="
+          [ -f subscraper.txt ] && wc -l subscraper.txt && head -5 subscraper.txt || echo "File not found"
+
+          echo -e "\n=== GitHub Subdomains Results ==="
+          [ -f github.txt ] && wc -l github.txt && head -5 github.txt || echo "File not found"
+
+          echo -e "\n=== Certificate Transparency Results ==="
+          [ -f crtsh.txt ] && wc -l crtsh.txt && head -5 crtsh.txt || echo "File not found"
+          
+############################################################
 # Recursive Enumeration
 ############################################################
 
