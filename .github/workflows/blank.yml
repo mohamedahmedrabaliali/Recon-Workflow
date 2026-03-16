@@ -21,6 +21,7 @@ jobs:
     env:
       DOMAIN: ${{ github.event.inputs.domain }}
       PDCP_API_KEY: c84ed614-623f-4d2b-bc14-11566fd4ad27
+      GITHUB_TOKEN: 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
     steps:
 
 ############################################################
@@ -82,6 +83,8 @@ jobs:
 
           go install github.com/rix4uni/subdomainfuzz@latest
           go install github.com/ffuf/ffuf/v2@latest
+
+          go install github.com/trickest/dsieve@latest
 
           go install github.com/owasp-amass/amass/v4/...@master
 
@@ -189,7 +192,7 @@ jobs:
           }
           EOF
 ############################################################
-# Download Base Wordlists
+# Download Base Wordlists  #DONE
 ############################################################
 
       - name: Download base wordlists
@@ -202,7 +205,7 @@ jobs:
           https://raw.githubusercontent.com/trickest/resolvers/main/resolvers.txt
 
 ############################################################
-# Download Additional Permutation Lists
+# Download Additional Permutation Lists  #DONE
 ############################################################
 
       - name: Download large permutation lists
@@ -268,14 +271,20 @@ jobs:
           -o github.txt &
           wait
 
+
+github-subdomains -d $DOMAIN -e \
+  -k -t  \
+  -o github.txt &
+  wait
+
 ############################################################
-# Certificate Transparency Discovery
+# Certificate Transparency Discovery    #DONE
 ############################################################
 
       - name: Certificate Transparency discovery
         run: |
 
-          curl -s "https://crt.sh/?q=%25.$DOMAIN&output=json" \
+          curl -s "https://crt.sh/?q=%25.$chewy.com&output=json" \
           | jq -r '.[].name_value' \
           | sed 's/\*\.//g' \
           | sort -u > crtsh.txt || true
@@ -300,13 +309,23 @@ jobs:
           while read domain; do
             subfinder -d "$domain" -recursive -silent
           done < passive.txt > recursive.txt
+
+############################################################
+# Filter and enrich a list of subdomains by level
+############################################################
+
+      - name: Filter and enrich a list of subdomains by level
+        run: |
+
+          dsieve -if test.txt > dsieve-result.txt
+
 ############################################################
 # Merge Domains
 ############################################################
 
       - name: Merge domains
         run: |
-          cat passive.txt recursive.txt | sort -u > domains.txt
+          cat passive.txt recursive.txt dsieve-result.txt| sort -u > domains.txt
 
 ############################################################
 # Permutation Generation
@@ -379,6 +398,84 @@ jobs:
         run: |
           httpx -l resolved.txt -title -status-code -tech-detect -silent > live.txt
 
+############################################################
+# Extract Alive URLs
+############################################################
+
+      - name: Extract alive URLs
+        run: |
+          cat live.txt | awk '{print $1}' > alivesubs.txt
+
+
+############################################################
+# Generate FUZZ Patterns
+############################################################
+
+      - name: Generate subdomain fuzz patterns
+        run: |
+
+          cat alivesubs.txt \
+          | subdomainfuzz -silent -d $DOMAIN -payload FUZZ \
+          | sort -u > fuzz_patterns.txt
+
+############################################################
+# Prepare Fuzz Targets
+############################################################
+
+      - name: Prepare fuzz targets
+        run: |
+
+          while read pattern; do
+            while read word; do
+              echo "${pattern/FUZZ/$word}"
+            done < permutations-final.txt
+          done < fuzz_patterns.txt \
+          | sort -u > fuzz_targets.txt
+
+############################################################
+# FFUF Bruteforce
+############################################################
+
+      - name: FFUF brute force
+        run: |
+
+          cat fuzz_patterns.txt | while read url; do
+            ffuf -u "$url" -w permutations-final.txt -mc 200,301,302,403 -t 100 -of csv >> ffuf_results.csv
+          done
+
+############################################################
+# Extract FFUF Domains
+############################################################
+
+      - name: Extract ffuf domains
+        run: |
+
+          cat ffuf_results.csv \
+          | cut -d',' -f1 \
+          | sed 's|https://||' \
+          | sed 's|http://||' \
+          | cut -d'/' -f1 \
+          | sort -u > ffuf_domains.txt
+
+############################################################
+# Merge FFUF Discoveries
+############################################################
+
+      - name: Merge ffuf discoveries
+        run: |
+          cat resolved.txt ffuf_domains.txt | sort -u > final-domains.txt
+
+############################################################
+# Final PureDNS Filtering
+############################################################
+
+      - name: Final PureDNS filtering
+        run: |
+
+          puredns resolve merged-fuff-discoveris-with-live-domains.txt \
+          --resolvers resolvers.txt \
+          --write final-domains.txt
+          
 ############################################################
 # Discord Notification
 ############################################################
