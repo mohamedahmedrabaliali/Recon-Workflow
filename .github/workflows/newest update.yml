@@ -263,7 +263,7 @@ jobs:
           assetfinder --subs-only $DOMAIN > assetfinder.txt &
           chaos -d $DOMAIN -silent > chaos.txt &
           echo $DOMAIN | subdog --silent > subdog.txt &
-          echo $DOMAIN | certinfo > certinfo.txt &
+          echo $DOMAIN | certinfo -silent > certinfo.txt &
           subscraper -d $DOMAIN -silent > subscraper.txt &
 
           github-subdomains -d $DOMAIN -e \
