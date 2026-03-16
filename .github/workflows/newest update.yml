@@ -276,11 +276,8 @@ jobs:
 
       - name: Certificate Transparency discovery
         run: |
-
-          curl -s "https://crt.sh/?q=%25.${{ env.DOMAIN }}&output=json" \
-          | jq -r '.[].name_value' \
-          | sed 's/\*\.//g' \
-          | sort -u > crtsh.txt || true
+          curl -s "https://crt.sh/?q=%25.${DOMAIN}&output=json" \
+          | jq -r '.[].name_value' | sed 's/\*\.//g' | sort -u > crtsh.txt 
 
 ############################################################
 # Merge Passive Results
