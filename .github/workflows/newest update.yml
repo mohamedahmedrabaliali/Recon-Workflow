@@ -324,7 +324,7 @@ jobs:
           | sort -u > passive.txt
 
 ############################################################
-# Debug step to check the results
+# Display all results
 ############################################################
 
       - name: Display all results
