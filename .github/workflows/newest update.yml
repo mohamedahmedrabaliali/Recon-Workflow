@@ -319,10 +319,9 @@ jobs:
 
       - name: Merge passive
         run: |
-
           cat subfinder.txt assetfinder.txt chaos.txt subdog.txt certinfo.txt subscraper.txt github.txt crtsh.txt \
-          | sort -u > passive.txt
-
+          | grep -v '\*' | sort -u > passive.txt
+          
 ############################################################
 # Display all results
 ############################################################
